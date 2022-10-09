@@ -1,0 +1,194 @@
+<CPULABEL@Label>:
+    font_size: 25
+    background_color: 0, 0, 0, 1
+    canvas.before:
+        Color:
+            rgba: self.background_color
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+
+<Filler@Label>
+
+
+<MEMLABEL@Label>:
+    font_size: 26
+    #size_hint: 1, 1
+    background_color: 0, 0, 0, 1
+    canvas.before:
+        Color:
+            rgba: self.background_color
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+
+<CPU_field>:
+    load_perc_box: load_perc_box
+    freq_box: freq_box
+
+    core_load_0: core_load_0
+    core_load_1: core_load_1
+    core_load_2: core_load_2
+    core_load_3: core_load_3
+
+    core_freq_0: core_freq_0
+    core_freq_1: core_freq_1
+    core_freq_2: core_freq_2
+    core_freq_3: core_freq_3
+
+    orientation: "vertical"
+
+    BoxLayout:
+        id: load_perc_box
+        orientation: "vertical"
+
+        CPULABEL:
+            id: core_load_0
+            text: 'CORE 0'
+
+        CPULABEL:
+            id: core_load_1
+            text: 'CORE 1'
+
+        CPULABEL:
+            id: core_load_2
+            text: 'CORE 2'
+
+        CPULABEL:
+            id: core_load_3
+            text: 'CORE 3'
+
+        Filler:
+            size_hint: 1, 0.1
+
+    BoxLayout:
+        id: freq_box
+        orientation: "vertical"
+        size_hint: 1, 0.4
+
+        CPULABEL:
+            id: core_freq_0
+            text: 'CORE 0'
+
+        CPULABEL:
+            id: core_freq_1
+            text: 'CORE 1'
+
+        CPULABEL:
+            id: core_freq_2
+            text: 'CORE 2'
+
+        CPULABEL:
+            id: core_freq_3
+            text: 'CORE 3'
+
+        Filler:
+            size_hint: 1, 0.3
+
+
+<MEM_field>:
+    mem_info: mem_info
+    swap_info: swap_info
+
+    orientation: 'vertical'
+    size_hint: 1, 0.34
+
+    MEMLABEL:
+        id: mem_info
+        text: "RAM"
+
+    MEMLABEL:
+        id: swap_info
+        font_size: 22
+        text: "SWAP"
+
+
+<Network_inner_Label@Label>:
+    font_size: 20
+    background_color: 0, 0, 0, 1
+    canvas.before:
+        Color:
+            rgba: self.background_color
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+
+<NetworkMainBox>:
+    pid_lab: pid_lab
+    ip_from_lab: ip_from_lab
+    ip_to_lab: ip_to_lab
+    process_name_lab: process_name_lab
+    process_username_lab: process_username_lab
+    status_lab: status_lab
+
+    size_hint_y: None
+    height: 60
+
+    Network_inner_Label:
+        id: pid_lab
+        size_hint: 0.25, 1
+        font_size: 22
+        text: "PID"
+
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint: 0.8, 1
+
+        Network_inner_Label:
+            id: ip_from_lab
+            font_size: 17
+            text: "IP FROM"
+
+        Network_inner_Label:
+            id: ip_to_lab
+            font_size: 22
+            text: "IP TO"
+
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint: 0.5, 1
+
+        Network_inner_Label:
+            id: process_username_lab
+            font_size: 17
+            text: "PROC USERNAME"
+
+        Network_inner_Label:
+            id: process_name_lab
+            font_size: 22
+            text: "PROC USERNAME"
+
+    Network_inner_Label:
+        id: status_lab
+        size_hint: 0.5, 1
+        text: "STATUS"
+
+
+<MainBoxLayout>:
+    main_lay_box: main_lay_box
+    cpu_box: cpu_box
+    mem_box: mem_box
+    network_field: network_field
+
+    BoxLayout:
+        id: main_lay_box
+        #size_hint: 0.5, 1
+        size_hint: None, None
+        size: 210, root.height
+        orientation: "vertical"
+
+        CPU_field:
+            id: cpu_box
+
+        MEM_field:
+            id: mem_box
+
+    ScrollView:
+        size_hint: 1, None
+        size: root.width, root.height
+
+        Network_field:
+            id: network_field
