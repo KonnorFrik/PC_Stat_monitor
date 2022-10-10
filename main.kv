@@ -167,17 +167,31 @@
         text: "STATUS"
 
 
+<SwitchButton>:
+    background_color: 0, 0, 0, 1
+    canvas.before:
+        Color:
+            rgba: self.background_color
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+
+<SwitchButtonsBox>
+
+
 <MainBoxLayout>:
     main_lay_box: main_lay_box
     cpu_box: cpu_box
     mem_box: mem_box
     network_field: network_field
+    network_box: network_box
+    switch_buttons_box:switch_buttons_box
 
     BoxLayout:
         id: main_lay_box
-        #size_hint: 0.5, 1
         size_hint: None, None
-        size: 210, root.height
+        size: 195, root.height
         orientation: "vertical"
 
         CPU_field:
@@ -186,9 +200,17 @@
         MEM_field:
             id: mem_box
 
-    ScrollView:
-        size_hint: 1, None
-        size: root.width, root.height
+    BoxLayout:
+        id: network_box
+        orientation: "vertical"
 
-        Network_field:
-            id: network_field
+        SwitchButtonsBox:
+            id: switch_buttons_box
+            size_hint: 1, None
+            size: root.width, 55
+
+        ScrollView:
+            size_hint: 1, 1
+
+            Network_field:
+                id: network_field

@@ -1,5 +1,6 @@
 import psutil
 from psutil._common import bytes2human
+from collections import namedtuple
 
 
 class CPU:
@@ -62,11 +63,13 @@ class NETWORK:
         self.pid_field = 'pid'
         self.proc_info = "proc_info"
         self.valid_fields = [self.this_ip_field, self.remote_ip_field, self.status_field]
+        self.network_stat = namedtuple('net_stat', ['pid', 'from_ip', 'remote_ip', 'proc_name', 'proc_username', 'status'])
 
     def get_all_fields(self) -> list:
         return self.valid_fields + [self.proc_info]
 
-    def get_net_stat(self, protocol: str = 'tcp4') -> dict:
+    # old
+    def get_net_stat_(self, protocol: str = 'tcp4') -> dict:
         result = dict()
         data = psutil.net_connections(kind=protocol)
         all_procs = {p.pid: p.info for p in psutil.process_iter(['name', 'username', 'pid'])}
@@ -88,8 +91,37 @@ class NETWORK:
 
         return result
 
+    def get_net_stat(self, protocol: str) -> tuple:
+        result = list()
+        data = psutil.net_connections(kind=protocol)
+        all_procs = {p.pid: p.info for p in psutil.process_iter(['name', 'username', 'pid'])}
+        for count in range(len(data)):
+            elem = data[count]
+
+            pid = getattr(elem, 'pid')
+            this_ip = getattr(elem, self.this_ip_field)
+            remote_ip = getattr(elem, self.remote_ip_field)
+            process_name = all_procs[pid]['name'] if pid is not None else None
+            process_username = all_procs[pid]['username'] if pid is not None else None
+            status = getattr(elem, self.status_field)
+
+            result.append(self.network_stat(pid=pid, from_ip=this_ip, remote_ip=remote_ip, proc_name=process_name, proc_username=process_username, status=status))
+        return tuple(result)
+
 
 if __name__ == '__main__':
-    stats = NETWORK().get_net_stat()
-    for obj in stats.values():
-        print(obj)
+    # stats = NETWORK().get_net_stat(protocol='tcp4')
+    # for obj in stats.values():
+    #     print(obj)
+    stats = list()
+    res = NETWORK().get_net_stat(protocol='tcp4')
+    stats.append(res)
+    print(res)
+    for item in res:
+        print(item)
+        print(getattr(item, 'from_ip'))
+    # print(stats[0])
+    # print(len(stats[0]))
+    # print()
+    # print(getattr(stats[0][0], 'pid'))
+    # print(type(getattr(stats[0][0], 'pid')))

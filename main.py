@@ -24,7 +24,7 @@ class MainBoxLayout(BoxLayout):
 
 
 class Network_field(GridLayout):
-    child = []
+    # child = []
     spacing_ = 7
     cols_ = 1
 
@@ -35,17 +35,17 @@ class Network_field(GridLayout):
     ip = 'ip'
     port = 'port'
 
-    my_ip = 'laddr'
-    re_ip = 'raddr'
+    my_ip = 'from_ip'
+    re_ip = 'remote_ip'
     pid = 'pid'
     process_info = 'proc_info'
-    process_name = 'name'
-    username = 'username'
+    process_name = 'proc_name'
+    process_username = 'proc_username'
     status = 'status'
 
     ip_pos = 0
     port_pos = 1
-    normal_len = 2
+    normal_len = 24
 
     no_info_msg = "X"
     no_ip = 'X.X.X.X'
@@ -54,18 +54,45 @@ class Network_field(GridLayout):
     def __init__(self, **kwargs):
         super(Network_field, self).__init__(cols=self.cols_, spacing=self.spacing_, size_hint_y=None, **kwargs)
         self.bind(minimum_height=self.setter('height'))
+        self.network_handler = pc_stats.NETWORK()
+        self.updates_protocols = list()
 
     def place_all_child(self, childs: list[Button | Label]):
         for obj in childs:
             self.add_widget(obj)
-            self.child.append(obj)
+            # self.child.append(obj)
 
-    def update_network_info(self, all_stats: dict):
-        if len(self.child) != 0:
-            self.clear_widgets(self.child)
-            # for obj in self.child:
-            #     self.remove_widget(obj)
+    def clear_all_childs(self):
+        if len(self.children) != 0:
+            self.clear_widgets(self.children)
 
+    # old
+    def loop_update_(self, *a):
+        self.clear_all_childs()
+
+        if len(self.updates_protocols) == 0:
+            return
+
+        stats = list()
+        for protocol in self.updates_protocols:
+            try:
+                result = self.network_handler.get_net_stat(protocol=protocol)
+                stats.append(result)
+            except ValueError:
+                continue
+
+        objects = list()
+        for stat in stats:
+            try:
+                objects.append(self.create_labels(stat))
+            except Exception as e:
+                print(f"IN: 'loop_update' ERR: {e}")
+
+        for obj in objects:
+            self.place_all_child(obj)
+
+    #  old
+    def update_network_info_(self, all_stats: dict) -> list:
         childs = list()
         for obj in all_stats.values():
             pid = str(obj[self.process_info][self.pid]) if obj[self.process_info] is not None else self.no_info_msg
@@ -76,7 +103,65 @@ class Network_field(GridLayout):
             status = obj[self.status]
             childs.append(NetworkMainBox(pid=pid, ip_from=ip_from, ip_to=ip_to, proc_name=proc_name, proc_username=proc_username, status=status))
 
-        self.place_all_child(childs)
+        return childs
+
+    def loop_update(self, *a):
+        self.clear_all_childs()
+
+        if len(self.updates_protocols) == 0:
+            return
+
+        stats = list()
+        for protocol in self.updates_protocols:
+            result = self.network_handler.get_net_stat(protocol=protocol)
+            stats.append(result)
+            del result
+
+        objects = list()
+        for stat in stats:
+            objects.append(self.create_labels(stat))
+
+        for obj in objects:
+            self.place_all_child(obj)
+
+    def create_labels(self, all_stats: tuple) -> list:
+        childs = list()
+
+        for obj in all_stats:
+            try:
+                pid = str(getattr(obj, self.pid))
+
+                my_addr = getattr(obj, self.my_ip)
+                if len(my_addr) == 2:
+                    ip_from = self.from_feild + getattr(my_addr, self.ip) + self.ip_splitter + str(getattr(my_addr, self.port))
+
+                else:
+                    ip_from = self.try_to_get_ip(my_addr)
+
+                remote_ip = getattr(obj, self.re_ip)
+                if len(remote_ip) == 2:
+                    ip_to = self.to_filed + getattr(remote_ip, self.ip) + self.ip_splitter + str(getattr(remote_ip, self.port))
+
+                else:
+                    ip_to = self.try_to_get_ip(remote_ip)
+
+                proc_name = process_name if (process_name := getattr(obj, self.process_name)) is not None else self.no_info_msg
+                proc_username = username if (username := getattr(obj, self.process_username)) is not None else self.no_info_msg
+                status = status_ if (status_ := getattr(obj, self.status)) is not None else self.no_info_msg
+
+                # print(f"{pid=}")
+                # print(f"{ip_from=}")
+                # print(f"{ip_to}")
+                # print(f"{proc_name}")
+                # print(f"{proc_username}")
+                # print(f"{status}\n")
+
+                childs.append(
+                    NetworkMainBox(pid=pid, ip_from=ip_from, ip_to=ip_to, proc_name=proc_name, proc_username=proc_username,
+                                   status=status))
+            except Exception as e:
+                print(f"IN: 'create_labels' ERR: '{e}'")
+        return childs
 
     def try_to_get_ip(self, stat: tuple) -> str:
         if len(stat) == 0:
@@ -92,6 +177,17 @@ class Network_field(GridLayout):
             port = self.no_port
 
         return ip + self.ip_splitter + port
+
+    def add_protocol(self, name):
+        if name in self.updates_protocols:
+            return
+        self.updates_protocols.append(name)
+
+    def delete_protocol(self, name):
+        try:
+            self.updates_protocols.pop(self.updates_protocols.index(name))
+        except IndexError:
+            return
 
 
 class NetworkMainBox(BoxLayout):
@@ -165,19 +261,112 @@ class MEM_field(BoxLayout):
         self.swap_info.text = f"SWAP: {used}/{self.swap_total}"
 
 
+class SwitchButtonsBox(BoxLayout):
+    childrens = dict()
+
+    def __init__(self, **kwargs):
+        super(SwitchButtonsBox, self).__init__(**kwargs)
+        self.network_field_obj = None
+
+    def create_switch_protocol_buttons(self, protocols: list[str]):
+        childs = list()
+        for name in protocols:
+            button = SwitchButton(self, self.network_field_obj, text=name)
+            button.protocol = name
+            button.bind(on_press=button.switch)
+            childs.append(button)
+
+            self.childrens[name] = button
+
+        self.place_all_childs(childs)
+
+    def place_all_childs(self, childs: list):
+        if len(childs) <= 0:
+            print("No childs for place")
+            return
+        for obj in childs:
+            self.add_widget(obj)
+
+    def check_switch_by_protocol(self, protocol: str):
+        if (protocol == 'inet4') and (self.childrens[protocol].is_active is True):
+            self.childrens['tcp4'].force_turn_on()
+            self.childrens['udp4'].force_turn_on()
+
+        elif (protocol == 'inet4') and (self.childrens[protocol].is_active is False):
+            self.childrens['tcp4'].force_turn_off()
+            self.childrens['udp4'].force_turn_off()
+
+        elif (protocol == 'inet6') and (self.childrens[protocol].is_active is True):
+            self.childrens['tcp6'].force_turn_on()
+            self.childrens['udp6'].force_turn_on()
+
+        elif (protocol == 'inet6') and (self.childrens[protocol].is_active is False):
+            self.childrens['tcp6'].force_turn_off()
+            self.childrens['udp6'].force_turn_off()
+
+
+class SwitchButton(Button):
+    is_active = False
+
+    def __init__(self, parent: SwitchButtonsBox, network_field_obj: Network_field, **kwargs):
+        super(SwitchButton, self).__init__(**kwargs)
+        self.parent_ = parent
+        self.network_field_obj = network_field_obj
+        self.init_color()
+
+    def init_color(self):
+        if self.is_active:
+            self.background_color = Color.GREEN
+        elif not self.is_active:
+            self.background_color = Color.RED
+
+    def force_turn_on(self):
+        self.is_active = True
+        self.init_color()
+        self.update_network()
+
+    def force_turn_off(self):
+        self.is_active = False
+        self.init_color()
+        self.update_network()
+
+    def switch_state(self):
+        if self.is_active:
+            self.background_color = Color.RED
+            self.is_active = False
+        elif not self.is_active:
+            self.background_color = Color.GREEN
+            self.is_active = True
+
+    def update_network(self):
+        if self.is_active:
+            self.network_field_obj.add_protocol(self.protocol)
+            self.force_update_network_field()
+        elif not self.is_active:
+            self.network_field_obj.delete_protocol(self.protocol)
+            self.force_update_network_field()
+
+    def force_update_network_field(self):
+        self.network_field_obj.loop_update()
+
+    def switch(self, *a):
+        self.switch_state()
+        self.update_network()
+        self.parent_.check_switch_by_protocol(self.protocol)
+
+
 class MainApp(App):
+    protocols_list = ['inet4', 'inet6', 'tcp4', 'tcp6', 'udp4', 'udp6']  # not here, but need: 'unix'
+
     def __init__(self):
         super().__init__()
         self.update_interval = 1
         self.clock = Clock
-        self.network_handler = pc_stats.NETWORK()
 
-    def create(self):
+    def startup(self):
         self.main_lay = MainBoxLayout()
-
-    def network_updates(self, *a):
-        stats = self.network_handler.get_net_stat()
-        self.main_lay.network_field.update_network_info(stats)
+        self.main_lay.switch_buttons_box.network_field_obj = self.main_lay.network_field
+        self.main_lay.switch_buttons_box.create_switch_protocol_buttons(self.protocols_list)
 
     def start_updates(self):
         self.clock.schedule_interval(self.main_lay.mem_box.update_ram_memory_info, self.update_interval)
@@ -186,10 +375,10 @@ class MainApp(App):
         self.clock.schedule_interval(self.main_lay.cpu_box.update_cpu_load_percent, self.update_interval)
         self.clock.schedule_interval(self.main_lay.cpu_box.update_cpu_frequency, self.update_interval)
 
-        self.clock.schedule_interval(self.network_updates, self.update_interval)
+        self.clock.schedule_interval(self.main_lay.network_field.loop_update, self.update_interval)
 
     def build(self):
-        self.create()
+        self.startup()
         self.start_updates()
         return self.main_lay
 
