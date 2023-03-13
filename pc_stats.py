@@ -107,21 +107,3 @@ class NETWORK:
 
             result.append(self.network_stat(pid=pid, from_ip=this_ip, remote_ip=remote_ip, proc_name=process_name, proc_username=process_username, status=status))
         return tuple(result)
-
-
-if __name__ == '__main__':
-    # stats = NETWORK().get_net_stat(protocol='tcp4')
-    # for obj in stats.values():
-    #     print(obj)
-    stats = list()
-    res = NETWORK().get_net_stat(protocol='tcp4')
-    stats.append(res)
-    print(res)
-    for item in res:
-        print(item)
-        print(getattr(item, 'from_ip'))
-    # print(stats[0])
-    # print(len(stats[0]))
-    # print()
-    # print(getattr(stats[0][0], 'pid'))
-    # print(type(getattr(stats[0][0], 'pid')))
